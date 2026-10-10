@@ -1,162 +1,67 @@
-<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ski Trick Visualizer</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0c1218;color:#ddd}
-.r{padding:6px 10px 3px;display:flex;flex-wrap:wrap;gap:4px}
-.cb{padding:4px 11px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:0;color:rgba(255,255,255,.5);transition:.12s}
-.cb:hover{background:rgba(255,255,255,.06);color:#fff}
-.cb.a{background:rgba(56,138,221,.2);color:#6bb8ff;border-color:rgba(56,138,221,.35)}
-.cw{position:relative;width:100%;background:#0a1420;border-radius:8px;overflow:hidden}
-.cw canvas{display:block;width:100%;height:auto}
-.hud{position:absolute;top:10px;left:12px;pointer-events:none;z-index:2}
-.hud .tn{font-size:9px;color:rgba(107,184,255,.55);text-transform:uppercase;letter-spacing:1.5px}
-.hud .ph{font-size:16px;font-weight:600;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);margin-top:2px}
-.hud .dg{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px}
-.ctrl{padding:6px 10px}
-.sb{display:flex;align-items:center;gap:6px}
-.sb input[type=range]{flex:1;-webkit-appearance:none;height:5px;background:rgba(255,255,255,.08);border-radius:3px;outline:0}
-.sb input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#6bb8ff;cursor:pointer;border:2px solid rgba(255,255,255,.8)}
-.tm{font-size:11px;font-weight:600;min-width:32px;text-align:right;font-variant-numeric:tabular-nums;color:rgba(255,255,255,.4)}
-.pr{display:flex;margin-top:4px;border-radius:4px;overflow:hidden;height:16px}
-.ps{display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:500;color:#fff;overflow:hidden;white-space:nowrap;padding:0 2px}
-.bt{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;align-items:center}
-.pb{padding:4px 12px;border:1px solid rgba(255,255,255,.1);border-radius:6px;background:0;cursor:pointer;font-size:10px;font-weight:600;color:rgba(255,255,255,.55);transition:.12s}
-.pb:hover{background:rgba(255,255,255,.06);color:#fff}
-.bars{display:flex;gap:8px;flex:1;min-width:140px;margin-left:8px}
-.bw{flex:1}.bl{font-size:7px;color:rgba(255,255,255,.22);text-transform:uppercase;letter-spacing:.4px;margin-bottom:1px}
-.btr{height:4px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden}
-.bf{height:100%;border-radius:2px;transition:width .05s}
-.inf{padding:3px 10px 6px;display:flex;gap:5px;flex-wrap:wrap}
-.st{background:rgba(255,255,255,.03);padding:3px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.04)}
-.st .lb{font-size:7px;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:.3px}
-.st .vl{font-size:12px;font-weight:600;color:rgba(255,255,255,.7)}
-</style></head><body>
-<div class="r" id="cats"></div><div class="r" id="tg"></div>
-<div class="cw"><canvas id="cv"></canvas>
-<div class="hud"><div class="tn" id="tnH"></div><div class="ph" id="phH">Select a trick</div><div class="dg" id="dgH"></div></div></div>
-<div class="ctrl"><div class="sb"><span style="font-size:8px;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:.5px">In-run</span>
-<input type="range" min="0" max="1000" value="0" id="scrub" step="1"><span class="tm" id="tL">0.0s</span></div>
-<div class="pr" id="pBar"></div>
-<div class="bt"><button class="pb" id="bS">Slow-mo</button><button class="pb" id="bF">Real speed</button><button class="pb" id="bR">Reset</button>
-<div class="bars"><div class="bw"><div class="bl">Muscle</div><div class="btr"><div class="bf" id="mF" style="width:20%;background:#378ADD"></div></div></div>
-<div class="bw"><div class="bl">Rotation</div><div class="btr"><div class="bf" id="rF" style="width:0%;background:#D85A30"></div></div></div>
-<div class="bw"><div class="bl">Height</div><div class="btr"><div class="bf" id="hF" style="width:0%;background:#1D9E75"></div></div></div></div></div></div>
-<div class="inf" id="sts"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-var PI=Math.PI,S=Math.sin,C=Math.cos,A=Math.abs,SQ=Math.sqrt,MN=Math.min,MX=Math.max;
-var cv=document.getElementById('cv'),W=1200,H=600;cv.width=W;cv.height=H;
-var R=new THREE.WebGLRenderer({canvas:cv,antialias:true});R.setSize(W,H);R.shadowMap.enabled=true;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.15;
-var sc=new THREE.Scene();sc.background=new THREE.Color(0x5a9ec8);sc.fog=new THREE.FogExp2(0x7ab4d4,.003);
-var cam=new THREE.PerspectiveCamera(55,W/H,.5,500);
-sc.add(new THREE.HemisphereLight(0x8ec5e8,0xb5a68c,.6));
-var sun=new THREE.DirectionalLight(0xfff4d8,1.2);sun.position.set(30,55,-15);sun.castShadow=true;var sh=sun.shadow;sh.mapSize.set(1024,1024);sh.camera.left=-60;sh.camera.right=60;sh.camera.top=50;sh.camera.bottom=-30;sh.camera.far=150;sc.add(sun);
-var snowM=new THREE.MeshStandardMaterial({color:0xdce6f0,roughness:.8}),kickM=new THREE.MeshStandardMaterial({color:0xd0dce8,roughness:.65}),scaffM=new THREE.MeshStandardMaterial({color:0x3a3530,roughness:.85,metalness:.3}),poleM=new THREE.MeshStandardMaterial({color:0x555,roughness:.5,metalness:.5}),netMt=new THREE.MeshStandardMaterial({color:0xe83818,roughness:.8,transparent:true,opacity:.4,side:2}),mkBM=new THREE.MeshStandardMaterial({color:0x2060c0}),mkRM=new THREE.MeshStandardMaterial({color:0xc02020}),suitM=new THREE.MeshStandardMaterial({color:0x152c48,roughness:.65}),pantM=new THREE.MeshStandardMaterial({color:0x121e2e,roughness:.7}),bootM=new THREE.MeshStandardMaterial({color:0x080808,roughness:.85}),skiM=new THREE.MeshStandardMaterial({color:0x1565a8,roughness:.25,metalness:.25}),helmM=new THREE.MeshStandardMaterial({color:0x222e3a,roughness:.45,metalness:.1}),vizM=new THREE.MeshStandardMaterial({color:0x38a0e8,roughness:.08,metalness:.5}),gloM=new THREE.MeshStandardMaterial({color:0x0e0e0e,roughness:.8}),treeM=new THREE.MeshStandardMaterial({color:0x1a4a28,roughness:.9}),trunkM=new THREE.MeshStandardMaterial({color:0x3a2a1a,roughness:.9}),mtnM=new THREE.MeshStandardMaterial({color:0x8aacc8,roughness:.9}),mtn2M=new THREE.MeshStandardMaterial({color:0x9ab8d0,roughness:.9});
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ski Trick Visualizer</title>
+<meta name="description" content="See where your body should be, moment by moment, through freestyle ski tricks.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="stage" aria-label="3D view of the jump"></div>
 
-function mkT(p,w,m){var v=[],idx=[],xs=8,hw=w/2;for(var i=0;i<p.length;i++){var zz=p[i][0],yy=p[i][1];for(var j=0;j<=xs;j++)v.push(-hw+(j/xs)*w,yy+S(j*.6+i*.3)*.08,zz)}var s=xs+1;for(var i=0;i<p.length-1;i++)for(var j=0;j<xs;j++){var a=i*s+j,b=a+s;idx.push(a,b,a+1,a+1,b,b+1)}var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(v,3));g.setIndex(idx);g.computeVertexNormals();var me=new THREE.Mesh(g,m);me.receiveShadow=true;return me}
+<header class="title" aria-live="polite">
+  <h1 id="trickName">Loading</h1>
+  <p id="trickExplain">Getting the skier and the jump ready.</p>
+</header>
 
-var irP=[];for(var z=-90;z<=26;z+=3){var y;if(z<-5){var t=(z+90)/85;y=48-40*t+2*S(t*PI*.7)}else{var t2=(z+5)/31;y=t2<.22?8:6.8+17*Math.pow((t2-.22)/.78,2)}irP.push([z,y])}sc.add(mkT(irP,22,snowM));
-var lnP=[];for(var z=48;z<=140;z+=3){var t=(z-48)/92;lnP.push([z,16-38*t+7*S(t*PI*.4)])}sc.add(mkT(lnP,26,snowM));
-var kP=[];for(var z=0;z<=26;z+=1.5){var t=z/26;kP.push([z,t<.2?8.3:8.3+17*Math.pow((t-.2)/.8,2)+.1])}sc.add(mkT(kP,16,kickM));
+<aside class="readout" aria-label="Live readout">
+  <dl>
+    <div><dt>Time</dt><dd><span id="rTime">0.00</span><small> s</small></dd></div>
+    <div><dt>Hips above snow</dt><dd><span id="rHeight">0.0</span><small> m</small></dd></div>
+    <div><dt>Speed</dt><dd><span id="rSpeed">0</span><small> km/h</small></dd></div>
+    <div><dt>Spin</dt><dd><span id="rSpin">0</span><small>&deg;</small></dd></div>
+    <div><dt>Flip</dt><dd><span id="rFlip">0</span><small>&deg;</small></dd></div>
+  </dl>
+  <p id="rInverted" class="inverted" hidden>Upside down</p>
+</aside>
 
-function bm(x,y,z,w,h,d){var m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),scaffM);m.position.set(x,y,z);m.castShadow=true;sc.add(m)}
-for(var z=0;z<=24;z+=5){var t=z/26,ty=t<.2?8:8+17*Math.pow((t-.2)/.8,2);bm(-8,ty/2-.5,z,.4,ty,.4);bm(8,ty/2-.5,z,.4,ty,.4)}
-for(var z=0;z<=22;z+=7){var t=z/26,ty=t<.2?8:8+17*Math.pow((t-.2)/.8,2);bm(0,ty*.35,z,16,.3,.3);bm(0,ty*.65,z,16,.3,.3)}
+<nav class="panel" aria-label="Choose a trick">
+  <div class="panel-scroll" id="trickList"></div>
+  <div class="panel-foot">
+    <fieldset class="seg" id="jumpSeg"><legend>Jump</legend></fieldset>
+    <fieldset class="seg" id="camSeg"><legend>Camera</legend></fieldset>
+    <label class="toggle"><input type="checkbox" id="seqToggle"> Show sequence <kbd>S</kbd></label>
+    <div class="runstats" id="runStats"></div>
+  </div>
+</nav>
 
-for(var z=-70;z<=120;z+=12){var y;if(z<=26){var t=(z+90)/85;y=z<-5?48-40*t:8}else if(z>=48){var t=(z-48)/92;y=16-38*t+7*S(t*PI*.4)}else continue;for(var si=0;si<2;si++){var sx=si?13:-13;var p=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,2.5,5),poleM);p.position.set(sx,y+1.2,z);sc.add(p)}if(z%24===0){for(var si=0;si<2;si++){var sx=si?13:-13;var n=new THREE.Mesh(new THREE.PlaneGeometry(.5,2),netMt);n.position.set(sx,y+1.3,z+6);n.rotation.y=sx>0?PI/2:-PI/2;sc.add(n)}}}
-for(var i=0;i<5;i++){var z=52+i*12;var t=(z-48)/92;var y=16-38*t+7*S(t*PI*.4)+.12;var mk=new THREE.Mesh(new THREE.BoxGeometry(18,.06,.5),i%2?mkRM:mkBM);mk.position.set(0,y,z);sc.add(mk)}
+<footer class="timeline" aria-label="Timeline">
+  <div class="tl-controls">
+    <button id="playBtn" class="play" aria-label="Play">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path id="playIcon" d="M7 4l13 8-13 8z"/></svg>
+    </button>
+    <div class="speeds" id="speedSeg" role="group" aria-label="Playback speed"></div>
+  </div>
+  <div class="tl-track" id="track" role="slider" tabindex="0" aria-label="Scrub through the trick" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0">
+    <div class="tl-air" id="airBand"></div>
+    <div class="tl-marks" id="marks"></div>
+    <div class="tl-head" id="head"><span id="headTime">0.00 s</span></div>
+  </div>
+  <p class="tl-hint">Drag to scrub. <kbd>Space</kbd> play, <kbd>&larr;</kbd><kbd>&rarr;</kbd> step a frame, <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> camera.</p>
+</footer>
 
-var mg=new THREE.BufferGeometry();mg.setAttribute('position',new THREE.Float32BufferAttribute([-200,0,-160,-120,55,-170,-50,72,-175,-200,0,-160,-50,72,-175,20,82,-172,-200,0,-160,20,82,-172,80,58,-168,-200,0,-160,80,58,-168,200,0,-155],3));mg.computeVertexNormals();sc.add(new THREE.Mesh(mg,mtnM));
-var mg2=new THREE.BufferGeometry();mg2.setAttribute('position',new THREE.Float32BufferAttribute([-180,0,-135,-90,42,-145,-20,56,-148,60,44,-142,180,0,-132,-180,0,-135,-20,56,-148,-180,0,-135,60,44,-142,180,0,-132],3));mg2.computeVertexNormals();sc.add(new THREE.Mesh(mg2,mtn2M));
+<div class="loader" id="loader" role="status">Loading the skier</div>
 
-for(var i=0;i<20;i++){var x=(Math.random()-.5)*160,z=-70+Math.random()*190;if(A(x)<16)continue;var y;if(z<=26){var t=(z+90)/85;y=z<-5?48-40*t:8}else if(z>=48){var t=(z-48)/92;y=16-38*t+7*S(t*PI*.4)}else continue;var h=2+Math.random()*3;var cone=new THREE.Mesh(new THREE.ConeGeometry(.7+Math.random()*.4,h*.6,5),treeM);cone.position.set(x,y+h*.32,z);sc.add(cone);var tr=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,h*.25,4),trunkM);tr.position.set(x,y+h*.1,z);sc.add(tr)}
-
-var man=new THREE.Group();sc.add(man);
-function mkL(rt,rb,c){var m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,1,7),c);m.castShadow=true;return m}
-function mkJ(r,c){return new THREE.Mesh(new THREE.SphereGeometry(r,7,5),c)}
-var B={torso:mkL(.38,.32,suitM),chest:mkJ(.38,suitM),hip:mkJ(.33,pantM),neck:mkL(.1,.13,suitM),head:mkJ(.25,helmM),viz:new THREE.Mesh(new THREE.SphereGeometry(.17,8,4,0,PI*2,0,PI*.45),vizM),luA:mkL(.12,.1,suitM),luF:mkL(.1,.08,suitM),lH:mkJ(.085,gloM),ruA:mkL(.12,.1,suitM),ruF:mkL(.1,.08,suitM),rH:mkJ(.085,gloM),lTh:mkL(.16,.12,pantM),lSh:mkL(.12,.1,pantM),rTh:mkL(.16,.12,pantM),rSh:mkL(.12,.1,pantM),lBt:new THREE.Mesh(new THREE.BoxGeometry(.19,.15,.28),bootM),rBt:new THREE.Mesh(new THREE.BoxGeometry(.19,.15,.28),bootM),lSk:new THREE.Mesh(new THREE.BoxGeometry(.1,.032,2),skiM),rSk:new THREE.Mesh(new THREE.BoxGeometry(.1,.032,2),skiM),lSJ:mkJ(.12,suitM),rSJ:mkJ(.12,suitM),lEJ:mkJ(.09,suitM),rEJ:mkJ(.09,suitM),lKJ:mkJ(.11,pantM),rKJ:mkJ(.11,pantM)};
-for(var k in B)man.add(B[k]);
-
-function posL(m,a,b){var d=[b[0]-a[0],b[1]-a[1],b[2]-a[2]];var l=SQ(d[0]*d[0]+d[1]*d[1]+d[2]*d[2])||.001;m.scale.set(1,l,1);m.position.set((a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(d[0]/l,d[1]/l,d[2]/l))}
-
-function mkPo(o){var d={hd:[0,1.65,.05],nk:[0,1.4,0],shL:[-.32,1.3,0],shR:[.32,1.3,0],elL:[-.46,1.0,.05],elR:[.46,1.0,.05],haL:[-.42,.76,.08],haR:[.42,.76,.08],hp:[0,.82,0],hpL:[-.16,.8,0],hpR:[.16,.8,0],knL:[-.18,.44,.04],knR:[.18,.44,.04],anL:[-.16,.07,.02],anR:[.16,.07,.02],btL:[-.16,0,.1],btR:[.16,0,.1]};if(o)for(var k in o)d[k]=o[k];return d}
-var PS=mkPo(),PC=mkPo({hd:[0,1.28,.18],nk:[0,1.08,.12],shL:[-.33,1.04,.1],shR:[.33,1.04,.1],elL:[-.44,.82,.18],elR:[.44,.82,.18],haL:[-.35,.62,.18],haR:[.35,.62,.18],knL:[-.2,.36,.28],knR:[.2,.36,.28],anL:[-.16,.1,.06],anR:[.16,.1,.06],btL:[-.16,.02,.16],btR:[.16,.02,.16]}),PP=mkPo({hd:[0,1.78,-.04],nk:[0,1.56,-.02],shL:[-.33,1.46,0],shR:[.33,1.46,0],elL:[-.46,1.5,.06],elR:[.46,1.5,.06],haL:[-.42,1.65,.04],haR:[.42,1.65,.04],knL:[-.18,.38,-.04],knR:[.18,.38,-.04],anL:[-.16,.04,-.02],anR:[.16,.04,-.02],btL:[-.16,-.02,.06],btR:[.16,-.02,.06]}),PTK=mkPo({hd:[0,1.12,.32],nk:[0,.98,.25],shL:[-.27,.94,.22],shR:[.27,.94,.22],elL:[-.28,.78,.32],elR:[.28,.78,.32],haL:[-.18,.6,.32],haR:[.18,.6,.32],hp:[0,.78,.08],hpL:[-.14,.76,.08],hpR:[.14,.76,.08],knL:[-.17,.64,.42],knR:[.17,.64,.42],anL:[-.14,.46,.2],anR:[.14,.46,.2],btL:[-.14,.4,.28],btR:[.14,.4,.28]}),PGR=mkPo({hd:[0,1.08,.35],nk:[0,.94,.28],shL:[-.27,.9,.24],shR:[.27,.9,.22],elL:[-.28,.76,.34],elR:[.13,.66,.38],haL:[-.18,.58,.34],haR:[.06,.48,.38],knL:[-.17,.64,.42],knR:[.17,.64,.42],anL:[-.14,.46,.2],anR:[.14,.46,.2],btL:[-.14,.4,.28],btR:[.14,.4,.28]}),POP=mkPo({hd:[0,1.52,.06],nk:[0,1.34,.04],shL:[-.35,1.24,.04],shR:[.35,1.24,.04],elL:[-.55,1.04,.1],elR:[.55,1.04,.1],haL:[-.58,.82,.08],haR:[.58,.82,.08],knL:[-.18,.38,.08],knR:[.18,.38,.08],anL:[-.16,.06,.03],anR:[.16,.06,.03],btL:[-.16,0,.1],btR:[.16,0,.1]}),PLD=mkPo({hd:[0,1.36,.12],nk:[0,1.16,.08],shL:[-.33,1.08,.06],shR:[.33,1.08,.06],elL:[-.46,.88,.14],elR:[.46,.88,.14],haL:[-.42,.72,.12],haR:[.42,.72,.12],knL:[-.19,.34,.18],knR:[.19,.34,.18],anL:[-.16,.08,.05],anR:[.16,.08,.05],btL:[-.16,.01,.12],btR:[.16,.01,.12]});
-
-function lerP(a,b,t){var r={};for(var k in a)r[k]=[a[k][0]+(b[k][0]-a[k][0])*t,a[k][1]+(b[k][1]-a[k][1])*t,a[k][2]+(b[k][2]-a[k][2])*t];return r}
-function sm(t){return t*t*(3-2*t)}
-function gPo(kf,t){if(t<=kf[0][0])return kf[0][1];if(t>=kf[kf.length-1][0])return kf[kf.length-1][1];for(var i=0;i<kf.length-1;i++)if(t>=kf[i][0]&&t<=kf[i+1][0])return lerP(kf[i][1],kf[i+1][1],sm((t-kf[i][0])/(kf[i+1][0]-kf[i][0])));return kf[kf.length-1][1]}
-function bKF(t){var k=[];k.push([0,PS],[.06,PS],[.10,PC],[.18,PP],[.24,PTK]);if(t.df>=6)k.push([.36,PTK],[.46,PGR],[.56,PTK],[.66,PTK]);else k.push([.34,PGR],[.48,PTK],[.60,PTK]);k.push([.76,POP],[.86,PLD],[.93,PC],[1,PS]);return k}
-
-function tY(z){if(z<-5){var t=(z+90)/85;return 48-40*t+2*S(t*PI*.7)}if(z<=26){var t2=(z+5)/31;return t2<.22?8:6.8+17*Math.pow((t2-.22)/.78,2)}if(z>=48){var t=(z-48)/92;return 16-38*t+7*S(t*PI*.4)}return 12}
-function gTraj(p){if(p<.18){var f=p/.18,z=-80+107*f;return{x:0,y:tY(z)+.4,z:z}}if(p<.22){var f=(p-.18)/.04,yS=tY(27)+.4,yL=yS+3;return{x:0,y:yS+(yL-yS)*sm(f),z:27}}if(p<.85){var f=(p-.22)/.63,z=27+f*52,lipY=tY(27)+3.4;return{x:0,y:lipY+30*4*f*(1-f)-12*f*f,z:z}}var f=(p-.85)/.15,z=79+f*40;return{x:0,y:tY(z)+.4,z:z}}
-
-var TK=[
-{n:"360",c:"Spins",sD:360,fD:0,tD:0,df:2,ar:"0.8-1.0s",ph:[{t:0,n:"Approach",e:.2},{t:.10,n:"Wind up",e:.6},{t:.22,n:"Pop",e:1},{t:.40,n:"180°",e:.3},{t:.65,n:"Spot",e:.4},{t:.85,n:"Open",e:.5},{t:.93,n:"Land",e:.7}]},
-{n:"720",c:"Spins",sD:720,fD:0,tD:0,df:4,ar:"1.2-1.5s",ph:[{t:0,n:"Approach",e:.2},{t:.08,n:"Wind",e:.6},{t:.22,n:"Pop",e:1},{t:.32,n:"360°",e:.3},{t:.52,n:"540°",e:.2},{t:.70,n:"720°",e:.3},{t:.85,n:"Open",e:.5},{t:.94,n:"Stomp",e:.8}]},
-{n:"1080",c:"Spins",sD:1080,fD:0,tD:0,df:6,ar:"1.5-1.8s",ph:[{t:0,n:"Approach",e:.2},{t:.07,n:"Wind",e:.7},{t:.22,n:"Explode",e:1},{t:.30,n:"360°",e:.3},{t:.46,n:"720°",e:.2},{t:.64,n:"900°",e:.25},{t:.80,n:"Open",e:.5},{t:.92,n:"Absorb",e:.8}]},
-{n:"Backflip",c:"Flips",sD:0,fD:360,tD:0,df:3,ar:"1.0-1.4s",ph:[{t:0,n:"Approach",e:.2},{t:.10,n:"Set",e:.6},{t:.22,n:"Throw",e:1},{t:.38,n:"90°",e:.3},{t:.52,n:"Inverted",e:.2},{t:.68,n:"270°",e:.3},{t:.82,n:"Spot",e:.5},{t:.93,n:"Absorb",e:.8}]},
-{n:"Dub backflip",c:"Flips",sD:0,fD:720,tD:0,df:7,ar:"1.8-2.2s",ph:[{t:0,n:"Approach",e:.2},{t:.08,n:"Set",e:.7},{t:.22,n:"Throw",e:1},{t:.32,n:"180°",e:.3},{t:.44,n:"360°",e:.2},{t:.58,n:"540°",e:.2},{t:.74,n:"720°",e:.3},{t:.88,n:"Open",e:.5},{t:.95,n:"Land",e:.8}]},
-{n:"Cork 720",c:"Off-axis",sD:720,fD:360,tD:45,df:6,ar:"1.3-1.6s",ph:[{t:0,n:"Approach",e:.2},{t:.10,n:"Set",e:.5},{t:.22,n:"Pop off-axis",e:1},{t:.36,n:"Inv.",e:.3},{t:.52,n:"Peak",e:.2},{t:.68,n:"Out",e:.3},{t:.82,n:"Spot",e:.5},{t:.93,n:"Land",e:.8}]},
-{n:"Dub Cork 1080",c:"Off-axis",sD:1080,fD:720,tD:45,df:8,ar:"1.8-2.2s",ph:[{t:0,n:"Approach",e:.2},{t:.06,n:"Wind",e:.7},{t:.22,n:"Pop",e:1},{t:.30,n:"Inv.1",e:.3},{t:.42,n:"540°",e:.2},{t:.54,n:"Inv.2",e:.2},{t:.68,n:"Tuck",e:.2},{t:.80,n:"Open",e:.3},{t:.92,n:"Spot",e:.5},{t:.97,n:"Stomp",e:.8}]},
-{n:"Dub Cork 1260",c:"Off-axis",sD:1260,fD:720,tD:45,df:9,ar:"2.0-2.4s",ph:[{t:0,n:"Approach",e:.2},{t:.05,n:"Commit",e:.7},{t:.22,n:"Pop",e:1},{t:.30,n:"360°",e:.3},{t:.42,n:"Inv.2",e:.2},{t:.56,n:"900°",e:.2},{t:.68,n:"1080°",e:.2},{t:.80,n:"Spot",e:.4},{t:.90,n:"Open",e:.5},{t:.97,n:"Land",e:.8}]},
-{n:"Dub Cork 1620",c:"Off-axis",sD:1620,fD:720,tD:45,df:10,ar:"2.4-2.8s",ph:[{t:0,n:"Approach",e:.2},{t:.04,n:"Commit",e:.8},{t:.22,n:"Explosive",e:1},{t:.30,n:"360°",e:.3},{t:.40,n:"720°",e:.2},{t:.50,n:"1080°",e:.2},{t:.62,n:"1260°",e:.2},{t:.74,n:"1440°",e:.2},{t:.84,n:"Spot",e:.5},{t:.94,n:"Open",e:.5},{t:.97,n:"Land",e:.8}]},
-{n:"Triple Cork 1620",c:"Off-axis",sD:1620,fD:1080,tD:45,df:10,ar:"2.8-3.2s",ph:[{t:0,n:"Approach",e:.2},{t:.04,n:"Max commit",e:.9},{t:.22,n:"Throw",e:1},{t:.30,n:"Inv.1",e:.3},{t:.40,n:"Inv.2",e:.2},{t:.52,n:"Inv.3",e:.2},{t:.64,n:"1260°",e:.2},{t:.76,n:"1440°",e:.25},{t:.86,n:"Spot",e:.5},{t:.96,n:"Land",e:.8}]},
-{n:"Misty 540",c:"Specialty",sD:540,fD:-360,tD:35,df:5,ar:"1.2-1.5s",ph:[{t:0,n:"Approach",e:.2},{t:.12,n:"Lean",e:.5},{t:.22,n:"Dive",e:1},{t:.38,n:"Tumbling",e:.3},{t:.55,n:"Inverted",e:.2},{t:.72,n:"Around",e:.3},{t:.86,n:"Spot",e:.5},{t:.95,n:"Land",e:.8}]},
-{n:"Rodeo 540",c:"Specialty",sD:540,fD:360,tD:40,df:5,ar:"1.2-1.5s",ph:[{t:0,n:"Approach",e:.2},{t:.12,n:"Set",e:.5},{t:.22,n:"Throw",e:1},{t:.38,n:"Rolling",e:.3},{t:.55,n:"Inverted",e:.2},{t:.72,n:"Around",e:.3},{t:.86,n:"Spot",e:.5},{t:.95,n:"Land",e:.8}]},
-{n:"Bio 900",c:"Specialty",sD:900,fD:540,tD:65,df:8,ar:"1.6-2.0s",ph:[{t:0,n:"Approach",e:.2},{t:.08,n:"Set",e:.6},{t:.22,n:"Pop deep",e:1},{t:.34,n:"Heavy inv.",e:.3},{t:.48,n:"Inverted",e:.2},{t:.62,n:"Spinning",e:.25},{t:.76,n:"Out",e:.3},{t:.88,n:"Spot",e:.5},{t:.95,n:"Land",e:.8}]},
-{n:"Switch 540",c:"Switch",sD:540,fD:0,tD:0,df:4,ar:"1.0-1.2s",ph:[{t:0,n:"Sw. approach",e:.3},{t:.12,n:"Blind set",e:.6},{t:.22,n:"Pop sw.",e:1},{t:.38,n:"180°",e:.3},{t:.56,n:"360°",e:.25},{t:.74,n:"Spot",e:.5},{t:.90,n:"Land fwd",e:.7}]},
-{n:"Sw Dub Cork 1260",c:"Switch",sD:1260,fD:720,tD:45,df:10,ar:"2.0-2.5s",ph:[{t:0,n:"Sw. approach",e:.3},{t:.05,n:"Blind commit",e:.7},{t:.22,n:"Pop sw.",e:1},{t:.30,n:"Inv.1",e:.3},{t:.42,n:"540°",e:.2},{t:.54,n:"Inv.2",e:.2},{t:.66,n:"900°",e:.2},{t:.78,n:"Spot",e:.5},{t:.90,n:"Open",e:.5},{t:.97,n:"Land sw.",e:.8}]}
-];
-
-var CATS=[];TK.forEach(function(t){if(CATS.indexOf(t.c)<0)CATS.push(t.c)});
-var aC="Spins",aT=null,aId=null,pl=false,prog=0;
-var pcols=['#534AB7','#1D9E75','#D85A30','#378ADD','#639922','#993556','#854F0B','#E24B4A','#888780','#5DCAA5'];
-function gPh(t,p){var r=t.ph[0];for(var i=t.ph.length-1;i>=0;i--)if(p>=t.ph[i].t){r=t.ph[i];break}return r}
-function gE(t,p){var ph=t.ph;for(var i=0;i<ph.length-1;i++)if(p>=ph[i].t&&p<ph[i+1].t){var f=(p-ph[i].t)/(ph[i+1].t-ph[i].t);return ph[i].e+(ph[i+1].e-ph[i].e)*sm(f)}return ph[ph.length-1].e}
-function rC(){var h='';CATS.forEach(function(c){h+='<button class="cb '+(c===aC?'a':'')+'" data-c="'+c+'">'+c+'</button>'});document.getElementById('cats').innerHTML=h}
-function rG(){var h='';TK.forEach(function(t){if(t.c===aC)h+='<button class="cb '+(aT&&aT.n===t.n?'a':'')+'" data-t="'+t.n+'">'+t.n+'</button>'});document.getElementById('tg').innerHTML=h}
-function rI(){var s=document.getElementById('sts'),p=document.getElementById('pBar');if(!aT){s.innerHTML='';p.innerHTML='';return}var t=aT;s.innerHTML=(t.sD?'<div class="st"><div class="lb">Spin</div><div class="vl">'+t.sD+'°</div></div>':'')+(t.fD?'<div class="st"><div class="lb">Flip</div><div class="vl">'+A(t.fD)+'°</div></div>':'')+(t.tD?'<div class="st"><div class="lb">Tilt</div><div class="vl">'+t.tD+'°</div></div>':'')+'<div class="st"><div class="lb">Air</div><div class="vl">'+t.ar+'</div></div><div class="st"><div class="lb">Diff</div><div class="vl">'+t.df+'/10</div></div>';var h='';for(var i=0;i<t.ph.length;i++){var w=i<t.ph.length-1?(t.ph[i+1].t-t.ph[i].t)*100:(1-t.ph[i].t)*100;h+='<div class="ps" style="width:'+w+'%;background:'+pcols[i%pcols.length]+'">'+t.ph[i].n+'</div>'}p.innerHTML=h}
-
-document.getElementById('cats').addEventListener('click',function(e){var c=e.target.getAttribute('data-c');if(!c)return;aC=c;aT=null;stp();rC();rG();rI()});
-document.getElementById('tg').addEventListener('click',function(e){var n=e.target.getAttribute('data-t');if(!n)return;stp();aT=null;for(var i=0;i<TK.length;i++)if(TK[i].n===n){aT=TK[i];break}prog=0;document.getElementById('scrub').value=0;rG();rI()});
-document.getElementById('scrub').addEventListener('input',function(e){stp();prog=e.target.value/1000;if(aT){var d=MX(3,MN(6,(aT.sD+A(aT.fD))/250));document.getElementById('tL').textContent=(prog*d).toFixed(1)+'s'}});
-document.getElementById('bS').addEventListener('click',function(){doPlay(1)});
-document.getElementById('bF').addEventListener('click',function(){doPlay(.35)});
-document.getElementById('bR').addEventListener('click',function(){stp();prog=0;document.getElementById('scrub').value=0;document.getElementById('tL').textContent='0.0s'});
-function stp(){if(aId){cancelAnimationFrame(aId);aId=null}pl=false}
-function doPlay(sp){if(!aT)return;stp();pl=true;var d=MX(3,MN(6,(aT.sD+A(aT.fD))/250))/sp,st=performance.now(),scr=document.getElementById('scrub'),tl=document.getElementById('tL');function tick(now){prog=MN(1,(now-st)/(d*1000));if(scr)scr.value=Math.round(prog*1000);if(tl)tl.textContent=(prog*d*sp).toFixed(1)+'s';if(prog<1&&pl)aId=requestAnimationFrame(tick);else pl=false}aId=requestAnimationFrame(tick)}
-
-var camPos=new THREE.Vector3(0,22,-88),camLook=new THREE.Vector3(0,16,-72);
-
-function applyPose(p){
-  posL(B.torso,[0,p.nk[1]-.04,p.nk[2]],[0,p.hp[1],p.hp[2]]);B.chest.position.set(0,p.nk[1],p.nk[2]);B.hip.position.set(0,p.hp[1],p.hp[2]);posL(B.neck,p.nk,p.hd);B.head.position.set(p.hd[0],p.hd[1],p.hd[2]);B.viz.position.set(p.hd[0],p.hd[1]-.03,p.hd[2]+.19);B.viz.rotation.x=-.3;
-  posL(B.luA,p.shL,p.elL);posL(B.luF,p.elL,p.haL);B.lH.position.set(p.haL[0],p.haL[1],p.haL[2]);posL(B.ruA,p.shR,p.elR);posL(B.ruF,p.elR,p.haR);B.rH.position.set(p.haR[0],p.haR[1],p.haR[2]);
-  B.lSJ.position.set(p.shL[0],p.shL[1],p.shL[2]);B.rSJ.position.set(p.shR[0],p.shR[1],p.shR[2]);B.lEJ.position.set(p.elL[0],p.elL[1],p.elL[2]);B.rEJ.position.set(p.elR[0],p.elR[1],p.elR[2]);
-  posL(B.lTh,p.hpL,p.knL);posL(B.lSh,p.knL,p.anL);posL(B.rTh,p.hpR,p.knR);posL(B.rSh,p.knR,p.anR);
-  B.lKJ.position.set(p.knL[0],p.knL[1],p.knL[2]);B.rKJ.position.set(p.knR[0],p.knR[1],p.knR[2]);
-  B.lBt.position.set(p.btL[0],p.btL[1],p.btL[2]);B.rBt.position.set(p.btR[0],p.btR[1],p.btR[2]);
-  B.lSk.position.set(p.btL[0],p.btL[1]-.065,p.btL[2]+.22);B.rSk.position.set(p.btR[0],p.btR[1]-.065,p.btR[2]+.22);
-}
-
-function draw(){
-  requestAnimationFrame(draw);
-  var tj=gTraj(prog);
-  if(aT){
-    var t=aT,kf=bKF(t),pose=gPo(kf,prog);man.position.set(tj.x,tj.y,tj.z);man.rotation.set(0,0,0);
-    var rS=.22,rE=.85,rp=MX(0,MN(1,(prog-rS)/(rE-rS))),srp=sm(rp);
-    if(prog>=.22&&prog<=.85){var eu=new THREE.Euler(t.fD*PI/180*srp,t.sD*PI/180*srp,t.tD*PI/180*(prog<.24?sm(MX(0,(prog-.22)/.02)):prog>.82?sm(MX(0,1-(prog-.82)/.06)):1),'YXZ');man.rotation.copy(eu)}
-    applyPose(pose);
-    var phase=gPh(t,prog),energy=gE(t,prog);
-    document.getElementById('phH').textContent=phase.n;document.getElementById('tnH').textContent=t.n;
-    document.getElementById('dgH').textContent=prog>.22&&prog<.90?Math.round((t.sD+A(t.fD))*srp)+'°':'';
-    var mf=document.getElementById('mF');mf.style.width=Math.round(energy*100)+'%';mf.style.background=energy>.7?'#E24B4A':energy>.4?'#D85A30':'#378ADD';
-    document.getElementById('rF').style.width=Math.round(srp*100)+'%';
-    var camH=prog<.20?0:prog>.87?MX(0,1-((prog-.87)/.13)):S(((prog-.20)/.67)*PI)*.9+.1;
-    document.getElementById('hF').style.width=Math.round(camH*100)+'%';
-  }else{man.position.set(0,tY(-50)+.4,-50);man.rotation.set(0,0,0);applyPose(PS)}
-  var tgt=new THREE.Vector3(tj.x,tj.y+5.5,tj.z-11),lk=new THREE.Vector3(tj.x,tj.y+1.2,tj.z+7);
-  camPos.lerp(tgt,.07);camLook.lerp(lk,.09);cam.position.copy(camPos);cam.lookAt(camLook);sun.position.set(tj.x+30,tj.y+55,tj.z-15);R.render(sc,cam);
-}
-rC();rG();rI();var tj0=gTraj(0);for(var i=0;i<15;i++){camPos.set(tj0.x,tj0.y+5.5,tj0.z-11);camLook.set(tj0.x,tj0.y+1.2,tj0.z+7)}draw();
-</script></body></html>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "ski-trick-visualizer",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node tests/sim.test.mjs", "serve": "python3 -m http.server 8000" },
+  "devDependencies": { "three": "0.170.0" }
+}
